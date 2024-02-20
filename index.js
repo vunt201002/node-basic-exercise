@@ -3,31 +3,25 @@ import axios from 'axios';
 let users = [];         // mảng user
 let postData = [];      // mảng post
 let cmtData = [];       // mảng comment
+const baseUrl = "https://jsonplaceholder.typicode.com";
 
-// hàm call api lấy post và comment
-const fetchPostAndComment = async () => {
+// 2. hàm get data
+const fetchData = async () => {
     try {
-        const [postResponse, commentResponse] = await Promise.all([
-            axios.get("https://jsonplaceholder.typicode.com/posts"),
-            axios.get("https://jsonplaceholder.typicode.com/comments")
+
+        const [userResponse, postResponse, commentResponse] = await Promise.all([
+            fetch(`${baseUrl}/users`),
+            fetch(`${baseUrl}/posts`),
+            fetch(`${baseUrl}/comments`)
         ]);
 
-        postData = postResponse.data;
-        cmtData = commentResponse.data;
+        const [userData, postData, cmtData] = await Promise.all([
+            userResponse.json(),
+            postResponse.json(),
+            commentResponse.json()
+        ]);
 
-        // console.log(postData, cmtData);
-    } catch (err) {
-        console.log("Error when fetching post and comment");
-    }
-};
-
-// 2. hàm get user
-const fetchUser = async () => {
-    try {
-        const res = await axios.get("https://jsonplaceholder.typicode.com/users");
-        const data = res.data;
-        
-        users = data.map(user => ({
+        users = userData.map(user => ({
             id: user.id,
             name: user.name,
             username: user.username,
@@ -36,18 +30,20 @@ const fetchUser = async () => {
             comments: []
         }));
 
-        // console.log(users);
+        // console.log(cmtData);
 
         return;
     } catch (err) {
-        console.log("Error when fetching user");
+        console.log("Error when fetching data");
     }
 };
 
 // 3. hàm map dữ liệu post và comment vào user
-const assignPostsAndCmtToUser = () => {
+const assignPostsAndCmtToUser = async () => {
+    await fetchData();
+
     // lặp qua tất cả post
-    postData.forEach(post => {
+    postData = postData.map(post => {
         // tìm index của user có id bằng userId trong post
         const userIdx = users.findIndex(user => user.id === post.userId);
 
@@ -55,10 +51,10 @@ const assignPostsAndCmtToUser = () => {
             // thêm post
             users[userIdx].posts.push({ id: post.id });
         }
-    });
+    })
 
     // lặp qua comment
-    cmtData.forEach(cmt => {
+    cmtData = cmtData.map(cmt => {
         // tìm index của user, tìm trong các post của
         // user có postId bằng với postId của mỗi comment
         const userIdx = users.findIndex(user => user.posts.some(post => post.id === cmt.postId));
@@ -69,7 +65,7 @@ const assignPostsAndCmtToUser = () => {
         }
     });
 
-    // console.log(users);
+    console.log(postData);
 };
 
 // 4. Lọc ra các user có nhiều hơn 3 comment
@@ -140,15 +136,17 @@ const sortByPostsCount = () => {
 const mergePostAndComment = async () => {
     try {
         const [postResponse, commentResponse] = await Promise.all([
-            axios.get("https://jsonplaceholder.typicode.com/posts/1"),
-            axios.get("https://jsonplaceholder.typicode.com/posts/1/comments")
+            fetch(`${baseUrl}/posts/1`),
+            fetch(`${baseUrl}/posts/1/comments`)
         ]);
 
-        const post = postResponse.data;
-        const comments = commentResponse.data;
+        const [post, comments] = await Promise.all([
+            postResponse.json(),
+            commentResponse.json()
+        ]);
 
         post.comments = [];
-        comments.forEach(c => {
+        comments.map(c => {
             post.comments.push(c);
         })
 
@@ -159,19 +157,16 @@ const mergePostAndComment = async () => {
 };
 
 // 2. Get data from user api
-await fetchUser();
-// console.log(users);
+// await fetchData();
 
 // 3. Get post, comment and map data
-await fetchPostAndComment();
 assignPostsAndCmtToUser();
-// console.log(users);
 
 // 4. Filter user
 // filterUserWithMoreThanThreeCmt();
 
 // 5. Reformat data
-reformatUsersWithCount();
+// reformatUsersWithCount();
 // console.log(users);
 
 // 6. User with most post, comment
